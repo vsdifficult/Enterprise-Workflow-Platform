@@ -1,10 +1,17 @@
-using shared.entities; 
-using auth.shared.enums; 
 
-namespace auth.infrastructure.entites; 
 
-public class User: BaseEntity
+using auth.shared.enums;
+
+namespace auth.shared.dtos; 
+
+public record UserDto
 {
+    public Guid Id { get; set; } 
+
+    public DateTime CreateAt { get; set; }
+
+    public DateTime UpdateAt { get; set; }
+    
     public string Name { get; set; } 
 
     public string PasswordHash { get; set; } 
@@ -14,4 +21,4 @@ public class User: BaseEntity
     public bool Active {get; set; }
 
     public Role UserRole { get; set; } 
-} 
+}
