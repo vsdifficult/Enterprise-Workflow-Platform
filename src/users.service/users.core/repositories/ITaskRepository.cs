@@ -6,5 +6,5 @@ namespace users.core.repositories;
 
 public interface ITaskRepository: IRepository<TaskDto, Guid>
 {
-    Task<IEnumerable<TaskDto?>> GetUserTasks(Guid userId); 
+    Task<IEnumerable<TaskDto?>> GetUserTasksAsync(Guid userId); 
 }

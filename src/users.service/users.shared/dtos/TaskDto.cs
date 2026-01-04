@@ -6,6 +6,10 @@ public record TaskDto
 {
     public Guid Id {get; set; } 
 
+    public DateTime CreateAt { get; set; }
+
+    public DateTime UpdateAt { get; set; }
+
     public Guid UserId {get; set; }
 
     public string Name {get; set; } 
