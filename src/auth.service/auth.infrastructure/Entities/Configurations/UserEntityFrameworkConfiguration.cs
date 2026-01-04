@@ -27,6 +27,13 @@ public class UserEntityFrameworkConfiguration: IEntityTypeConfiguration<User>
         builder.Property(u => u.PasswordHash) 
             .IsRequired(); 
 
+        builder.Property(u => u.IsVerify) 
+            .HasDefaultValue(false) 
+            .IsRequired(); 
+
+        builder.Property(u => u.Code) 
+            .IsRequired(); 
+            
         builder.Property(u => u.UserRole) 
             .IsRequired(); 
 
