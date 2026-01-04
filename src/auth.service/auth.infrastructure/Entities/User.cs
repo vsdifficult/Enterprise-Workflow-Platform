@@ -13,5 +13,9 @@ public class User: BaseEntity
 
     public bool Active {get; set; }
 
+    public string Code {get; set; } 
+
+    public bool IsVerify {get; set; }
+
     public Role UserRole { get; set; } 
 } 

@@ -18,7 +18,11 @@ public record UserDto
 
     public string Email { get; set; } 
 
-    public bool Active {get; set; }
+    public bool Active {get; set; } 
+
+    public string Code {get; set; } 
+
+    public bool IsVerify {get; set; } 
 
     public Role UserRole { get; set; } 
 }

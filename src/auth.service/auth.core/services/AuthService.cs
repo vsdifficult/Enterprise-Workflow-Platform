@@ -1,5 +1,6 @@
-
-
+using auth.core.repositories;
+using auth.shared.dtos;
+using HostMarket.Core.Services.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -19,13 +20,13 @@ public class AuthService : IAuthenticationService
         _configuration = configuration;
     }
 
-    public async Task<AuthResult> SignInAsync(UserLoginDTO loginDTO)
+    public async Task<AuthResult> SignInAsync(LoginDto loginDTO)
     {
         try
         {
             var user = await _userRepository.GetByEmailAsync(loginDTO.Email);
 
-            if (user == null || !BCrypt.Net.BCrypt.Verify(loginDTO.Password, user.Password))
+            if (user == null || !BCrypt.Net.BCrypt.Verify(loginDTO.Password, user.PasswordHash))
             {
                 return new AuthResult
                 {
@@ -39,7 +40,6 @@ public class AuthService : IAuthenticationService
             return new AuthResult
             {
                 Success = true,
-                UserId = user.Id,
                 Token = token.ToString()
             };
         }
@@ -55,35 +55,32 @@ public class AuthService : IAuthenticationService
     }
 
 
-    public async Task<AuthResult> SignUpAsync(UserRegisterDto registerDto)
+    public async Task<AuthResult> SignUpAsync(RegisterDto registerDto)
     {
         try
         {
-            // if user exist checking
-            if (await _userRepository.IsUserExistsByEmailAsync(registerDto.Email))
-            {
-                return new AuthResult
-                {
-                    Success = false,
-                    ErrorMessage = "User with this email already exists"
-                };
-            }
 
-            // installing the verification code
+            var usr = await _userRepository.GetByEmailAsync(registerDto.Email) ?? 
+                throw new Exception($"User with {registerDto.Email} not found"); 
+
             var verificationCode = new Random().Next(10000, 99999).ToString();
             await _userRepository.SetVerificationCodeAsync(registerDto.Email, verificationCode);
 
-            // password hashing
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
 
             var userId = Guid.NewGuid();
-            var user = new UserDTO
+            var user = new UserDto
             {
                 Id = userId,
-                UserName = registerDto.Username,
+                Name = registerDto.Name,
                 Email = registerDto.Email,
-                Password = passwordHash,
-                Code = verificationCode
+                PasswordHash = passwordHash,
+                Code = verificationCode,
+                Active = true,
+                UserRole = shared.enums.Role.User,
+                CreateAt = DateTime.UtcNow,
+                UpdateAt = DateTime.UtcNow,
+                IsVerify = false
             };
 
             await _userRepository.CreateAsync(user);
@@ -93,7 +90,6 @@ public class AuthService : IAuthenticationService
             return new AuthResult
             {
                 Success = true,
-                UserId = userId,
                 Token = token
             };
         }
@@ -108,33 +104,19 @@ public class AuthService : IAuthenticationService
         }
     }
 
-
-    // SignOut function
-    public Task<bool> SignOutAsync(string token)
-    {
-        return Task.FromResult(true);
-    }
-
-
-    // ----- Sup part -----
-
-    // Generate jwt-token function
     private async Task<string> GenerateTokenAsync(Guid userId)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_configuration["AppSettings:JwtSecret"] ?? string.Empty);
 
-        // creating a claims list for jwt
         var claims = new List<Claim>
         {
             new (ClaimTypes.NameIdentifier, userId.ToString())
         };
 
-        // Claim - Username
         var user = await _userRepository.GetByIdAsync(userId);
-        claims.Add(new Claim("UserName", user.UserName));
+        claims.Add(new Claim("UserName", user.Name));
 
-        // Creating jwt
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
@@ -144,7 +126,6 @@ public class AuthService : IAuthenticationService
                 Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256Signature)
         };
 
-        // return token
         var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
     }
@@ -190,33 +171,5 @@ public class AuthService : IAuthenticationService
         var result = await _userRepository.DeleteAsync(userid);
         return new AuthResult { Success = result };
     }
-
-
-    // // Token validation
-    // public Task<bool> ValidateTokenAsync(string token)
-    // {
-    //     try
-    //     {
-    //         var tokenHandler = new JwtSecurityTokenHandler();
-    //         var key = Encoding.ASCII.GetBytes(_configuration.["AppSettings:JwtSecret"] ?? string.Empty);
-
-    //         tokenHandler.ValidateToken(token, new TokenValidationParameters
-    //         {
-    //             ValidateIssuerSigningKey = true,
-    //             IssuerSigningKey = new SymmetricSecurityKey(key),
-    //             ValidateIssuer = false,
-    //             ValidateAudience = false,
-    //             ValidateLifetime = true,
-    //             ClockSkew = TimeSpan.Zero
-    //         }, out _);
-
-    //         return Task.FromResult(true);
-    //     }
-
-    //     catch
-    //     {
-    //         return Task.FromResult(false);
-    //     }
-    // }
 
 }
