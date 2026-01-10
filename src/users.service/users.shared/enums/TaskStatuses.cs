@@ -1,8 +1,9 @@
 
 namespace users.shared.enums; 
 
-public enum TaskStatuses
+public enum TskStatus
 {
     Active,
-    Done
+    Done,
+    Paused
 }

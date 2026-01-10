@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using users.core.repositories;
 using users.infastructure.entities;
 using users.shared.dtos;
+using users.shared.enums;
 
 namespace users.infastructure.repositories; 
 
@@ -101,7 +102,7 @@ public class TaskRepository: ITaskRepository
         try
         {
             var tsks = await _context.Tasks
-                .Where(t => t.Status == shared.enums.TaskStatuses.Active)
+                .Where(t => t.Status == shared.enums.TskStatus.Active)
                 .AsNoTracking()
                 .Select(t => MapToDto(t)).ToListAsync(); 
             
@@ -110,6 +111,31 @@ public class TaskRepository: ITaskRepository
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error return tasks");
+            throw;
+        }
+    } 
+
+    public async Task<bool> ChangeTaskStatusAsync(Guid id, TskStatus status)
+    {
+        try
+        {
+            var tsk = await _context.Tasks
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == id); 
+
+            if (tsk == null) { return false; }
+
+            if (tsk.Status != status)
+            {
+                tsk.Status = status;
+                _context.Tasks.Update(tsk);
+                await _context.SaveChangesAsync(); 
+            } 
+            return true; 
+        } 
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error change task status");
             throw;
         }
     }

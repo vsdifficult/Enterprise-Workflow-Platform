@@ -1,0 +1,27 @@
+
+using Microsoft.Extensions.Logging;
+using users.core.repositories;
+using users.core.services.interfaces;
+using users.infastructure.repositories;
+
+namespace users.infastructure.services; 
+
+public class DataService: IDataService 
+{
+    private readonly UsersDbContext _context; 
+
+    private readonly ILoggerFactory _loggerFactory; 
+
+    public DataService(
+        UsersDbContext context,
+        ILoggerFactory loggerFactory
+    )
+    {
+        _context = context; 
+        _loggerFactory = loggerFactory; 
+
+        Tasks = new TaskRepository(_context, loggerFactory.CreateLogger<TaskRepository>()); 
+    } 
+
+    public ITaskRepository Tasks {get; }
+}

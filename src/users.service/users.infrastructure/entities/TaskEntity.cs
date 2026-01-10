@@ -11,5 +11,5 @@ public class TaskEntity: BaseEntity
 
     public string Description {get; set; } 
     
-    public TaskStatuses Status {get; set; }
+    public TskStatus Status {get; set; }
 } 
