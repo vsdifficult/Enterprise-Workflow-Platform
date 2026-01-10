@@ -1,7 +1,7 @@
 using shared.entities;
 using users.shared.enums; 
 
-namespace users.infastructure.entities; 
+namespace users.infrastructure.entities; 
 
 public class TaskEntity: BaseEntity
 {

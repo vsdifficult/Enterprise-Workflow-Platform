@@ -4,9 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using auth.shared.dtos;
-using auth.shared.enums; 
 
-namespace HostMarket.Core.Services.Interfaces;
+namespace auth.core.services.interfaces;
 
 public record AuthResult
 {
@@ -19,10 +18,10 @@ public record AuthResult
 /// <summary>
 /// Service for authentication operations
 /// </summary>
-public interface IAuthenticationService
+public interface IAuthService
 {
-    Task<AuthResult> SignUpAsync(RegisterDto dto);
-    Task<AuthResult> SignInAsync(LoginDto dto);
-    Task<AuthResult> VerificationAsync(VerificationDto dto);
+    Task<AuthResult> SignUpAsync(RegisterRequest dto);
+    Task<AuthResult> SignInAsync(LoginRequest dto);
+    Task<AuthResult> VerificationAsync(VerificationRequest dto);
     Task<AuthResult> DeleteAsync(Guid userid);
 }

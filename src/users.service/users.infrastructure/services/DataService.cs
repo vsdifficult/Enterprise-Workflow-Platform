@@ -2,9 +2,9 @@
 using Microsoft.Extensions.Logging;
 using users.core.repositories;
 using users.core.services.interfaces;
-using users.infastructure.repositories;
+using users.infrastructure.repositories;
 
-namespace users.infastructure.services; 
+namespace users.infrastructure.services; 
 
 public class DataService: IDataService 
 {

@@ -1,32 +1,30 @@
 using auth.core.repositories;
+using auth.core.services.interfaces;
 using auth.shared.dtos;
-using HostMarket.Core.Services.Interfaces;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
+using System;
+using System.Threading.Tasks;
 
 namespace auth.core.services;
 
-public class AuthService : IAuthenticationService
+public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
-    private readonly IConfiguration _configuration;
+    private readonly ITokenService _tokenService;
 
-    public AuthService(IUserRepository userRepository, IConfiguration configuration)
+    public AuthService(IUserRepository userRepository, ITokenService tokenService)
     {
         _userRepository = userRepository;
-        _configuration = configuration;
+        _tokenService = tokenService;
     }
 
-    public async Task<AuthResult> SignInAsync(LoginDto loginDTO)
+    public async Task<AuthResult> SignInAsync(LoginRequest loginRequest)
     {
         try
         {
-            var user = await _userRepository.GetByEmailAsync(loginDTO.Email);
+            var user = await _userRepository.GetByEmailAsync(loginRequest.Email);
 
-            if (user == null || !BCrypt.Net.BCrypt.Verify(loginDTO.Password, user.PasswordHash))
+            // TODO: Replace with a secure password hashing and verification mechanism like BCrypt.
+            if (user == null || loginRequest.Password != user.PasswordHash)
             {
                 return new AuthResult
                 {
@@ -35,16 +33,15 @@ public class AuthService : IAuthenticationService
                 };
             }
 
-            var token = await GenerateTokenAsync(user.Id);
+            var token = _tokenService.CreateToken(user);
 
             return new AuthResult
             {
                 Success = true,
-                Token = token.ToString()
+                Token = token
             };
         }
-
-        catch (Exception ex)
+        catch (Exception)
         {
             return new AuthResult
             {
@@ -54,26 +51,26 @@ public class AuthService : IAuthenticationService
         }
     }
 
-
-    public async Task<AuthResult> SignUpAsync(RegisterDto registerDto)
+    public async Task<AuthResult> SignUpAsync(RegisterRequest registerRequest)
     {
         try
         {
-
-            var usr = await _userRepository.GetByEmailAsync(registerDto.Email) ?? 
-                throw new Exception($"User with {registerDto.Email} not found"); 
+            var existingUser = await _userRepository.GetByEmailAsync(registerRequest.Email);
+            if (existingUser != null)
+            {
+                return new AuthResult { Success = false, ErrorMessage = "User with this email already exists." };
+            }
 
             var verificationCode = new Random().Next(10000, 99999).ToString();
-            await _userRepository.SetVerificationCodeAsync(registerDto.Email, verificationCode);
 
-            var passwordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
+            // TODO: Replace with a secure password hashing mechanism like BCrypt.
+            var passwordHash = registerRequest.Password;
 
-            var userId = Guid.NewGuid();
             var user = new UserDto
             {
-                Id = userId,
-                Name = registerDto.Name,
-                Email = registerDto.Email,
+                Id = Guid.NewGuid(),
+                Name = registerRequest.Name,
+                Email = registerRequest.Email,
                 PasswordHash = passwordHash,
                 Code = verificationCode,
                 Active = true,
@@ -84,17 +81,16 @@ public class AuthService : IAuthenticationService
             };
 
             await _userRepository.CreateAsync(user);
+            await _userRepository.SetVerificationCodeAsync(registerRequest.Email, verificationCode);
 
-            var token = await GenerateTokenAsync(userId);
 
             return new AuthResult
             {
                 Success = true,
-                Token = token
+                Message = "User created successfully. Please check your email for verification code."
             };
         }
-
-        catch (Exception ex)
+        catch (Exception)
         {
             return new AuthResult
             {
@@ -104,46 +100,20 @@ public class AuthService : IAuthenticationService
         }
     }
 
-    private async Task<string> GenerateTokenAsync(Guid userId)
-    {
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.ASCII.GetBytes(_configuration["AppSettings:JwtSecret"] ?? string.Empty);
-
-        var claims = new List<Claim>
-        {
-            new (ClaimTypes.NameIdentifier, userId.ToString())
-        };
-
-        var user = await _userRepository.GetByIdAsync(userId);
-        claims.Add(new Claim("UserName", user.Name));
-
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddHours(24),
-            SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key),
-                Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256Signature)
-        };
-
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
-    }
-
-    public async Task<AuthResult> VerificationAsync(VerificationDto verificationDto)
+    public async Task<AuthResult> VerificationAsync(VerificationRequest verificationRequest)
     {
         try
         {
-            var user = await _userRepository.GetByEmailAsync(verificationDto.Email);
+            var user = await _userRepository.GetByEmailAsync(verificationRequest.Email);
             if (user == null)
             {
-                return new AuthResult 
-                { 
-                    Success = false, 
-                    ErrorMessage = "User not found" 
+                return new AuthResult
+                {
+                    Success = false,
+                    ErrorMessage = "User not found"
                 };
             }
-            if (user.Code != verificationDto.Code)
+            if (user.Code != verificationRequest.Code)
             {
                 return new AuthResult
                 {
@@ -151,19 +121,20 @@ public class AuthService : IAuthenticationService
                     ErrorMessage = "Invalid verification code"
                 };
             }
-            await _userRepository.SetEmailVerifiedAsync(verificationDto.Email);
+            await _userRepository.SetEmailVerifiedAsync(verificationRequest.Email);
 
-            return new AuthResult { Success = true };
+            var token = _tokenService.CreateToken(user);
+
+            return new AuthResult { Success = true, Token = token };
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return new AuthResult 
-            { 
-                Success = false, 
-                ErrorMessage = "An error occurred during verification" 
+            return new AuthResult
+            {
+                Success = false,
+                ErrorMessage = "An error occurred during verification"
             };
         }
-
     }
 
     public async Task<AuthResult> DeleteAsync(Guid userid)
@@ -171,5 +142,4 @@ public class AuthService : IAuthenticationService
         var result = await _userRepository.DeleteAsync(userid);
         return new AuthResult { Success = result };
     }
-
 }

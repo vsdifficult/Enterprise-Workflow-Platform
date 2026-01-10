@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using users.infastructure.entities;
+using users.infrastructure.entities;
+using users.infrastructure.entities.configurations;
 
 public class UsersDbContext: DbContext
 {
@@ -11,5 +11,6 @@ public class UsersDbContext: DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.ApplyConfiguration(new TaskEntityFrameworkConfiguration());
     }
 }

@@ -1,8 +1,8 @@
 
 namespace auth.shared.dtos; 
 
-public record VerificationDto
+public record VerificationRequest
 {
-    public string Email {get; init; } 
-    public string Code {get; init; }
+    public string? Email {get; init; } 
+    public string? Code {get; init; }
 }

@@ -8,6 +8,14 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0-rc.2.24473.11" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0-rc.2.24473.11" />
   </ItemGroup>
-
+  <ItemGroup>
+    <ProjectReference Include="..\..\shared\shared.csproj" />  
+    <ProjectReference Include="..\users.shared\users.shared.csproj"/>
+    <ProjectReference Include="..\users.core\users.core.csproj"/>
+    <ProjectReference Include="..\users.infrastructure\users.infrastructure.csproj"/>
+  </ItemGroup>
 </Project>

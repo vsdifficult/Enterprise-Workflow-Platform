@@ -1,73 +1,59 @@
-
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using users.core.repositories;
+using users.core.services.interfaces;
 using users.shared.dtos;
-using users.shared.enums; 
-using users.core.services.interfaces; 
+using users.shared.enums;
 
-using Microsoft.Extensions.Logging; 
+namespace users.core.services;
 
-namespace users.core.services; 
-
-public class TaskService: ITaskService
+public class TaskService : ITaskService
 {
-    private readonly IDataService _dataService; 
+    private readonly ITaskRepository _taskRepository;
+    private readonly ILogger<TaskService> _logger;
 
-    private readonly Logger<TaskService> _logger;
-
-    public TaskService(
-        IDataService dataService,
-        Logger<TaskService> logger
-    )
+    public TaskService(ITaskRepository taskRepository, ILogger<TaskService> logger)
     {
-        _dataService = dataService;
+        _taskRepository = taskRepository;
         _logger = logger;
-    } 
-
-    public async Task<bool> StartAsync(CreateTaskDto taskBody)
-    {
-        var task_dto = new TaskDto
-        {
-           Id = Guid.NewGuid(),
-           UserId = taskBody.UserId,
-           Name = taskBody.Name,
-           Description = taskBody.Description,
-           CreateAt = DateTime.UtcNow,
-           UpdateAt = DateTime.UtcNow
-        };  
-
-        await _dataService.Tasks.CreateAsync(task_dto); 
-
-        return true; 
-    } 
-
-    public async Task<bool> StopAsync(Guid taskId)
-    {
-        var tsk = await _dataService.Tasks.GetByIdAsync(taskId); 
-
-        if (tsk == null)
-        {
-            _logger.LogError($"Task with id {taskId} not found");
-            return false; 
-        } 
-
-        await _dataService.Tasks.ChangeTaskStatusAsync(taskId, TskStatus.Paused); 
-
-        return true; 
-    } 
-
-
-    public async Task<bool> ChangeStatusAsync(Guid taskId, 
-                                            TskStatus status)
-    {
-        var tsk = await _dataService.Tasks.GetByIdAsync(taskId); 
-
-        if (tsk == null)
-        {
-            _logger.LogError($"Task with id {taskId} not found");
-            return false; 
-        }  
-
-        await _dataService.Tasks.ChangeTaskStatusAsync(taskId, status);
-
-        return true; 
     }
-} 
+
+    public async Task<TaskDto> CreateTaskAsync(CreateTaskDto taskDto)
+    {
+        var task = new TaskDto
+        {
+            Id = Guid.NewGuid(),
+            UserId = taskDto.UserId,
+            Name = taskDto.Name,
+            Description = taskDto.Description,
+            Status = TskStatus.Active,
+            CreateAt = DateTime.UtcNow,
+            UpdateAt = DateTime.UtcNow
+        };
+
+        await _taskRepository.CreateAsync(task);
+        return task;
+    }
+
+    public async Task<bool> DeleteTaskAsync(Guid id)
+    {
+        return await _taskRepository.DeleteAsync(id);
+    }
+
+    public async Task<TaskDto> GetTaskByIdAsync(Guid id)
+    {
+        return await _taskRepository.GetByIdAsync(id);
+    }
+
+    public async Task<IEnumerable<TaskDto>> GetTasksByUserIdAsync(Guid userId)
+    {
+        return await _taskRepository.GetUserTasksAsync(userId);
+    }
+
+    public async Task<bool> UpdateTaskStatusAsync(Guid id, TskStatus status)
+    {
+        return await _taskRepository.ChangeTaskStatusAsync(id, status);
+    }
+}

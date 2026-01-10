@@ -12,9 +12,9 @@ public record TaskDto
 
     public Guid UserId {get; set; }
 
-    public string Name {get; set; } 
+    public string? Name {get; set; } 
 
-    public string Description {get; set; } 
+    public string? Description {get; set; } 
     
     public TskStatus Status {get; set; }
 } 
@@ -23,7 +23,7 @@ public record CreateTaskDto
 {
     public Guid UserId {get; set; }
 
-    public string Name {get; set; } 
+    public string? Name {get; set; } 
 
-    public string Description {get; set; } 
+    public string? Description {get; set; } 
 }

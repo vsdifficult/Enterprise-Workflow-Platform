@@ -1,24 +1,26 @@
 
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using users.core.repositories;
-using users.infastructure.entities;
+using users.infrastructure.entities;
 using users.shared.dtos;
 using users.shared.enums;
 
-namespace users.infastructure.repositories; 
+namespace users.infrastructure.repositories;
 
 public class TaskRepository: ITaskRepository
 {
-    private readonly UsersDbContext _context;  
+    private readonly UsersDbContext _context;
+    private readonly ILogger<TaskRepository> _logger;
 
-    private readonly ILogger<TaskRepository> _logger; 
-    public TaskRepository(UsersDbContext context,
-        ILogger<TaskRepository> logger)
+    public TaskRepository(UsersDbContext context, ILogger<TaskRepository> logger)
     {
-        _context = context; 
-        _logger = logger; 
+        _context = context;
+        _logger = logger;
     }
 
     public async Task<Guid> CreateAsync(TaskDto dto)
@@ -26,11 +28,8 @@ public class TaskRepository: ITaskRepository
         try
         {
             var entity = MapToEntity(dto);
-            entity.CreateAt = DateTime.UtcNow;
-            
             await _context.Tasks.AddAsync(entity);
             await _context.SaveChangesAsync();
-            
             return entity.Id;
         }
         catch (Exception ex)
@@ -44,34 +43,27 @@ public class TaskRepository: ITaskRepository
     {
         try
         {
-            var tsk = await _context.Tasks
-                .AsNoTracking() 
-                .FirstOrDefaultAsync(t => t.Id == id); 
-            
-            if (tsk == null) { return false; } 
-        
-            _context.Tasks.Remove(tsk);  
-            await _context.SaveChangesAsync(); 
-            return true; 
-        } 
+            var tsk = await _context.Tasks.FindAsync(id);
+            if (tsk == null) { return false; }
+
+            _context.Tasks.Remove(tsk);
+            await _context.SaveChangesAsync();
+            return true;
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting task with ID {Id}", id); 
-            throw; 
+            _logger.LogError(ex, "Error deleting task with ID {Id}", id);
+            throw;
         }
-    } 
+    }
 
     public async Task<TaskDto?> GetByIdAsync(Guid id)
     {
         try
         {
-            var tsk = await _context.Tasks  
-                .AsNoTracking()   
-                .FirstOrDefaultAsync(t => t.Id == id ) 
-                ?? throw new Exception($"Error find task with ID {id}"); 
-
-            return MapToDto(tsk); 
-        } 
+            var tsk = await _context.Tasks.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id);
+            return tsk == null ? null : MapToDto(tsk);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving task with ID {Id}", id);
@@ -86,66 +78,80 @@ public class TaskRepository: ITaskRepository
             var tsks = await _context.Tasks
                 .Where(t => t.UserId == userId)
                 .AsNoTracking()
-                .Select(t => MapToDto(t)).ToListAsync(); 
-            
-            return tsks; 
+                .Select(t => MapToDto(t)).ToListAsync();
+
+            return tsks;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving user task with user ID {Id}", userId);
             throw;
         }
-    } 
+    }
 
     public async Task<IEnumerable<TaskDto>> GetAllAsync()
     {
         try
         {
             var tsks = await _context.Tasks
-                .Where(t => t.Status == shared.enums.TskStatus.Active)
+                .Where(t => t.Status == TskStatus.Active)
                 .AsNoTracking()
-                .Select(t => MapToDto(t)).ToListAsync(); 
-            
-            return tsks; 
+                .Select(t => MapToDto(t)).ToListAsync();
+
+            return tsks;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error return tasks");
             throw;
         }
-    } 
+    }
 
     public async Task<bool> ChangeTaskStatusAsync(Guid id, TskStatus status)
     {
         try
         {
-            var tsk = await _context.Tasks
-                .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.Id == id); 
-
+            var tsk = await _context.Tasks.FindAsync(id);
             if (tsk == null) { return false; }
 
-            if (tsk.Status != status)
-            {
-                tsk.Status = status;
-                _context.Tasks.Update(tsk);
-                await _context.SaveChangesAsync(); 
-            } 
-            return true; 
-        } 
+            tsk.Status = status;
+            _context.Tasks.Update(tsk);
+            await _context.SaveChangesAsync();
+            return true;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error change task status");
             throw;
         }
     }
+
     public async Task<bool> UpdateAsync(TaskDto entity)
     {
-        throw new NotImplementedException(); 
+        try
+        {
+            var task = await _context.Tasks.FindAsync(entity.Id);
+            if (task == null) return false;
+
+            task.Name = entity.Name;
+            task.Description = entity.Description;
+            task.Status = entity.Status;
+            task.UpdateAt = DateTime.UtcNow;
+
+            _context.Tasks.Update(task);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error updating task {entity.Id}");
+            throw;
+        }
     }
+
     private TaskDto MapToDto(TaskEntity body)
-    { 
-        return new TaskDto 
+    {
+        return new TaskDto
         {
             Id = body.Id,
             UserId = body.UserId,
@@ -154,12 +160,12 @@ public class TaskRepository: ITaskRepository
             UpdateAt = body.UpdateAt,
             Description = body.Description,
             Status = body.Status
-        }; 
+        };
     }
 
     private TaskEntity MapToEntity(TaskDto body)
-    { 
-        return new TaskEntity 
+    {
+        return new TaskEntity
         {
             Id = body.Id,
             UserId = body.UserId,
@@ -168,6 +174,6 @@ public class TaskRepository: ITaskRepository
             UpdateAt = body.UpdateAt,
             Description = body.Description,
             Status = body.Status
-        }; 
+        };
     }
 }
