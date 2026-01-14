@@ -1,23 +1,19 @@
-
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
-using Ocelot.DependencyInjection;
-using Ocelot.Middleware;
-using MMLib.SwaggerForOcelot;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
-
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddOcelot();
-builder.Services.AddSwaggerForOcelot(builder.Configuration);
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("auth", new OpenApiInfo { Title = "Auth API", Version = "v1" });
+    c.SwaggerDoc("users", new OpenApiInfo { Title = "Users API", Version = "v1" });
+});
+
+builder.Services.AddReverseProxy()
+    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
 var app = builder.Build();
 
@@ -26,12 +22,13 @@ app.UseHttpsRedirection();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerForOcelotUI(opt =>
+    app.UseSwaggerUI(c =>
     {
-        opt.PathToSwaggerGenerator = "/swagger/docs";
+        c.SwaggerEndpoint("/swagger/auth/v1/swagger.json", "Auth API v1");
+        c.SwaggerEndpoint("/swagger/users/v1/swagger.json", "Users API v1");
     });
 }
 
-await app.UseOcelot();
+app.MapReverseProxy();
 
 app.Run();
