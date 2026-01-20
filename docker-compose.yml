@@ -1,117 +1,110 @@
-version: '3.8'
+version: "3.9"
 
 services:
-  postgres-master:
-    image: bitnami/postgresql:14
+  postgres-auth:
+    image: postgres:15-alpine
+    container_name: postgres-auth
     restart: always
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
-      - postgres_master_data:/bitnami/postgresql
+      - postgres_auth_data:/var/lib/postgresql/data
     environment:
-      - POSTGRESQL_PGAUDIT_LOG_CLIENT=on
-      - POSTGRESQL_LOG_HOSTNAME=on
-      - POSTGRESQL_REPLICATION_MODE=master
-      - POSTGRESQL_REPLICATION_USER=repl_user
-      - POSTGRESQL_REPLICATION_PASSWORD=repl_password
-      - POSTGRESQL_USERNAME=${POSTGRES_USER:-postgres}
-      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - POSTGRESQL_DATABASE=${POSTGRES_DB:-bonussystem}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-enterpriseauth}
     healthcheck:
-      test: ["CMD-SHELL", "/opt/bitnami/scripts/postgresql/healthcheck.sh"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
 
-  postgres-replica:
-    image: bitnami/postgresql:14
+  postgres-tasks:
+    image: postgres:15-alpine
+    container_name: postgres-tasks
     restart: always
     ports:
-      - '5433:5432' 
+      - "5439:5432"
     volumes:
-      - postgres_replica_data:/bitnami/postgresql
+      - postgres_task_data:/var/lib/postgresql/data
     environment:
-      - POSTGRESQL_LOG_HOSTNAME=on
-      - POSTGRESQL_REPLICATION_MODE=slave
-      - POSTGRESQL_REPLICATION_USER=repl_user
-      - POSTGRESQL_REPLICATION_PASSWORD=repl_password
-      - POSTGRESQL_MASTER_HOST=postgres-master
-      - POSTGRESQL_MASTER_PORT_NUMBER=5432
-      - POSTGRESQL_USERNAME=${POSTGRES_USER:-postgres}
-      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - POSTGRESQL_DATABASE=${POSTGRES_DB:-bonussystem}
-    depends_on:
-      postgres-master:
-        condition: service_healthy
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-enterprisetasks}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   pgadmin:
-    container_name: pgadmin4_container
     image: dpage/pgadmin4:7.1
+    container_name: pgadmin4_container
     restart: always
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_SERVER_MODE: "False"
     volumes:
       - pgadmin-data:/var/lib/pgadmin
     ports:
       - "5050:80"
     depends_on:
-      - postgres-master
+      - postgres-auth
+      - postgres-tasks
 
   auth_service:
     build:
       context: ./src/auth.service
-      dockerfile: Dockerfile
     container_name: auth-service
     ports:
       - "5006:80"
     environment:
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
-      - ASPNETCORE_URLS=http://+:80
-      - AppDb__Type=${APP_DB_TYPE:-Postgres}
-      - AppDb__JwtSecret=${APP_JWT_SECRET:-super-secret-key-that-is-long-enough}
-      - AppDb__TokenExpirationMinutes=${APP_TOKEN_EXPIRATION:-525600}
-      - ConnectionStrings__DefaultConnection=Host=postgres-master,postgres-replica;Port=5432;Database=${POSTGRES_DB:-bonussystem};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres};Maximum Pool Size=50;Connection Idle Lifetime=60;
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_URLS: http://+:80
+      ConnectionStrings__DefaultConnection: >
+        Host=postgres-auth;
+        Port=5432;
+        Database=${POSTGRES_DB:-enterpriseauth};
+        Username=${POSTGRES_USER:-postgres};
+        Password=${POSTGRES_PASSWORD:-postgres};
     depends_on:
-      postgres-master:
+      postgres-auth:
         condition: service_healthy
-      postgres-replica:
-        condition: service_started
 
   users_service:
     build:
       context: ./src/users.service
-      dockerfile: Dockerfile
     container_name: users-service
     ports:
       - "5152:80"
     environment:
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
-      - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres-master,postgres-replica;Port=5432;Database=${POSTGRES_DB:-bonussystem};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres};
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_URLS: http://+:80
+      ConnectionStrings__DefaultConnection: >
+        Host=postgres-tasks;
+        Port=5432;
+        Database=${POSTGRES_DB:-enterprisetasks};
+        Username=${POSTGRES_USER:-postgres};
+        Password=${POSTGRES_PASSWORD:-postgres};
     depends_on:
-      postgres-master:
+      postgres-tasks:
         condition: service_healthy
-      postgres-replica:
-        condition: service_started
 
   gateway:
     build:
       context: ./src/gateway
-      dockerfile: Dockerfile
     container_name: gateway
     ports:
       - "5130:80"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://+:80
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:80
     depends_on:
       - auth_service
       - users_service
 
 volumes:
-  postgres_master_data:
-  postgres_replica_data:
+  postgres_auth_data:
+  postgres_task_data:
   pgadmin-data:
