@@ -7,9 +7,10 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\shared\shared.csproj" />   
-    <ProjectReference Include="..\users.shared\users.shared.csproj"/> 
+    <ProjectReference Include="..\users.shared\users.shared.csproj" /> 
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Confluent.Kafka" Version="2.13.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
