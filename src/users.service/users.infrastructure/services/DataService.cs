@@ -20,7 +20,7 @@ public class DataService: IDataService
         _context = context; 
         _loggerFactory = loggerFactory; 
 
-        Tasks = new TaskRepository(_context, loggerFactory.CreateLogger<TaskRepository>()); 
+        Tasks = new TaskRepository(_context, _loggerFactory.CreateLogger<TaskRepository>()); 
     } 
 
     public ITaskRepository Tasks {get; }

@@ -9,5 +9,7 @@ public interface ITaskRepository: IRepository<TaskDto, Guid>
 {
     Task<IEnumerable<TaskDto?>> GetUserTasksAsync(Guid userId); 
 
-    Task<bool> ChangeTaskStatusAsync(Guid id, TskStatus status);
+    Task<bool> ChangeTaskStatusAsync(Guid id, TskStatus status); 
+
+    Task<bool> AddTaskToUserAsync(Guid taskId, Guid userId);
 }

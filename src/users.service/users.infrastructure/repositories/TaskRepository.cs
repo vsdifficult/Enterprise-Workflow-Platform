@@ -76,7 +76,7 @@ public class TaskRepository: ITaskRepository
         try
         {
             var tsks = await _context.Tasks
-                .Where(t => t.UserId == userId)
+                .Where(t => t.UserId.Contains(userId))
                 .AsNoTracking()
                 .Select(t => MapToDto(t)).ToListAsync();
 
@@ -122,6 +122,25 @@ public class TaskRepository: ITaskRepository
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error change task status");
+            throw;
+        }
+    } 
+
+    public async Task<bool> AddTaskToUserAsync(Guid taskId, Guid userId)
+    {
+        try
+        {
+            var tsk = await _context.Tasks.FindAsync(taskId);
+            if (tsk == null) { return false; }
+
+            tsk.UserId.Add(userId);
+            _context.Tasks.Update(tsk);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding task to user");
             throw;
         }
     }

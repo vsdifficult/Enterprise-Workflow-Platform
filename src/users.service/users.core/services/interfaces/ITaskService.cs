@@ -12,5 +12,6 @@ public interface ITaskService
     Task<TaskDto> GetTaskByIdAsync(Guid id);
     Task<TaskDto> CreateTaskAsync(CreateTaskDto task);
     Task<bool> UpdateTaskStatusAsync(Guid id, TskStatus status);
-    Task<bool> DeleteTaskAsync(Guid id);
+    Task<bool> DeleteTaskAsync(Guid id); 
+    Task<bool> AddTaskForUserAsync(Guid userId, Guid taskId); 
 }

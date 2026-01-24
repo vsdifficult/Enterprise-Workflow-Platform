@@ -10,7 +10,7 @@ public record TaskDto
 
     public DateTime UpdateAt { get; set; }
 
-    public Guid UserId {get; set; }
+    public List<Guid> UserId {get; set; }
 
     public string? Name {get; set; } 
 
@@ -21,7 +21,7 @@ public record TaskDto
 
 public record CreateTaskDto
 {
-    public Guid UserId {get; set; }
+    public List<Guid> UserId {get; set; }
 
     public string? Name {get; set; } 
 

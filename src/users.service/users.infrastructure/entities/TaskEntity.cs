@@ -5,7 +5,7 @@ namespace users.infrastructure.entities;
 
 public class TaskEntity: BaseEntity
 {
-    public Guid UserId {get; set; }
+    public List<Guid> UserId {get; set; } = new List<Guid>(); 
 
     public string Name {get; set; } 
 

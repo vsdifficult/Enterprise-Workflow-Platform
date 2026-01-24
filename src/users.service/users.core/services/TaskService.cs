@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Net.Http.Headers; 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Caching.Distributed; 
+using Microsoft.Extensions.Configuration; 
 using users.core.repositories;
 using users.core.services.interfaces;
 using users.shared.dtos;
@@ -11,13 +14,23 @@ namespace users.core.services;
 
 public class TaskService : ITaskService
 {
-    private readonly ITaskRepository _taskRepository;
+    private readonly IDataService _dataService;
     private readonly ILogger<TaskService> _logger;
+    private readonly HttpClient _httpClient; 
+    private readonly IDistributedCache _cache;  
+    private readonly IConfiguration _configuration; 
 
-    public TaskService(ITaskRepository taskRepository, ILogger<TaskService> logger)
+    public TaskService(IDataService dataService, 
+                        ILogger<TaskService> logger,
+                        IDistributedCache cache,
+                        HttpClient httpClient,
+                        IConfiguration configuration)
     {
-        _taskRepository = taskRepository;
+        _dataService = dataService;
         _logger = logger;
+        _cache = cache; 
+        _httpClient = httpClient; 
+        _configuration = configuration;
     }
 
     public async Task<TaskDto> CreateTaskAsync(CreateTaskDto taskDto)
@@ -33,27 +46,83 @@ public class TaskService : ITaskService
             UpdateAt = DateTime.UtcNow
         };
 
-        await _taskRepository.CreateAsync(task);
+        await _dataService.Tasks.CreateAsync(task);
+        _logger.LogInformation($"Task {task.Id} added"); 
         return task;
     }
 
     public async Task<bool> DeleteTaskAsync(Guid id)
     {
-        return await _taskRepository.DeleteAsync(id);
+        return await _dataService.Tasks.DeleteAsync(id);
     }
 
     public async Task<TaskDto> GetTaskByIdAsync(Guid id)
     {
-        return await _taskRepository.GetByIdAsync(id);
+        return await _dataService.Tasks.GetByIdAsync(id);
     }
 
     public async Task<IEnumerable<TaskDto>> GetTasksByUserIdAsync(Guid userId)
     {
-        return await _taskRepository.GetUserTasksAsync(userId);
+        return await _dataService.Tasks.GetUserTasksAsync(userId);
     }
 
     public async Task<bool> UpdateTaskStatusAsync(Guid id, TskStatus status)
     {
-        return await _taskRepository.ChangeTaskStatusAsync(id, status);
+        return await _dataService.Tasks.ChangeTaskStatusAsync(id, status);
+    }  
+
+    public async Task<bool> AddTaskForUserAsync(Guid userId, Guid taskId)
+    {
+        if (await UserExistsAsync(userId) == false)
+        {
+            _logger.LogError($"User with id {userId} not found"); 
+            throw new Exception("User not found");
+        }
+
+        if (await _dataService.Tasks.GetByIdAsync(taskId) == null)
+        {
+            _logger.LogError($"Task with id {taskId} not found"); 
+            throw new Exception("Task not found");
+        } 
+
+        await _dataService.Tasks.AddTaskToUserAsync(userId, taskId); 
+        _logger.LogInformation($"Task with id {taskId} add user with id {userId}"); 
+
+        return true; 
+    } 
+
+    private async Task<bool> UserExistsAsync(Guid id)
+    {
+        var cacheKey = $"user:{id}"; 
+        var cached = await _cache.GetStringAsync(cacheKey); 
+        
+        if (cached == "exists")
+        {
+            return true; 
+        } 
+
+        try
+        {
+            var accessToken = _configuration["AccessServiceJWT"]; 
+            var request = new HttpRequestMessage(HttpMethod.Get, $"http://auth-service/users/{id}/exists");
+            if (!string.IsNullOrEmpty(accessToken))
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            }
+
+            var response = await _httpClient.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                await _cache.SetStringAsync(cacheKey, "exists", new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) });
+                return true;
+            }
+            return false;
+        } 
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error {ex.Message}"); 
+
+            return false; 
+        }
     }
 }
