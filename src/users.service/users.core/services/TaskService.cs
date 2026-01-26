@@ -1,11 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+
 using System.Net.Http.Headers; 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Caching.Distributed; 
 using Microsoft.Extensions.Configuration; 
-using users.core.repositories;
 using users.core.services.interfaces;
 using users.shared.dtos;
 using users.shared.enums;
