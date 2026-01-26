@@ -101,7 +101,7 @@ public class TaskService : ITaskService
         try
         {
             var accessToken = _configuration["AccessServiceJWT"]; 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"http://auth-service/users/{id}/exists");
+            var request = new HttpRequestMessage(HttpMethod.Get, $"http://auth-service:80/users/{id}/exists");
             if (!string.IsNullOrEmpty(accessToken))
             {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
