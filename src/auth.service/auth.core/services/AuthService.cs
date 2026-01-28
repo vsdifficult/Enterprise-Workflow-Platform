@@ -1,8 +1,7 @@
 using auth.core.repositories;
 using auth.core.services.interfaces;
 using auth.shared.dtos;
-using System;
-using System.Threading.Tasks;
+
 
 namespace auth.core.services;
 
@@ -141,5 +140,10 @@ public class AuthService : IAuthService
     {
         var result = await _userRepository.DeleteAsync(userid);
         return new AuthResult { Success = result };
+    } 
+
+    public async Task<AuthResult> LogOutAsync(Guid userId)
+    {
+        throw new NotImplementedException(); 
     }
 }

@@ -82,12 +82,40 @@ public class TaskService : ITaskService
             throw new Exception("Task not found");
         } 
 
-        await _dataService.Tasks.AddTaskToUserAsync(userId, taskId); 
+        var result = await _dataService.Tasks.AddTaskToUserAsync(userId, taskId); 
+        if ( result == false)
+        {
+            _logger.LogError($"Error to add task"); 
+        }
         _logger.LogInformation($"Task with id {taskId} add user with id {userId}"); 
 
         return true; 
     } 
+    public async Task<bool> DeleteTaskForUserAsync(Guid userId, Guid taskId)
+    {
+        if (await UserExistsAsync(userId) == false)
+        {
+            _logger.LogError($"User with id {userId} not found"); 
+            throw new Exception("User not found");
+        } 
 
+        if (await _dataService.Tasks.GetByIdAsync(taskId) == null)
+        {
+            _logger.LogError($"Task with id {taskId} not found"); 
+            throw new Exception("Task not found");
+        }  
+
+        var result = await _dataService.Tasks.RemoveTaskForUserAsync(taskId, userId); 
+        if ( result == false)
+        {
+            _logger.LogError($"Error to edit task"); 
+        }
+
+        _logger.LogInformation($"User with id {userId} removed on task with id {taskId}"); 
+
+        return true; 
+    }
+     
     private async Task<bool> UserExistsAsync(Guid id)
     {
         var cacheKey = $"user:{id}"; 
@@ -101,7 +129,7 @@ public class TaskService : ITaskService
         try
         {
             var accessToken = _configuration["AccessServiceJWT"]; 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"http://auth-service:80/users/{id}/exists");
+            var request = new HttpRequestMessage(HttpMethod.Get, $"http://auth-service:80/api/auth/{id}/exists");
             if (!string.IsNullOrEmpty(accessToken))
             {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);

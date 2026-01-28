@@ -11,5 +11,7 @@ public interface ITaskRepository: IRepository<TaskDto, Guid>
 
     Task<bool> ChangeTaskStatusAsync(Guid id, TskStatus status); 
 
-    Task<bool> AddTaskToUserAsync(Guid taskId, Guid userId);
+    Task<bool> AddTaskToUserAsync(Guid taskId, Guid userId); 
+
+    Task<bool> RemoveTaskForUserAsync(Guid taskId, Guid userId); 
 }

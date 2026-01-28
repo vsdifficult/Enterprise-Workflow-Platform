@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using users.core.services.interfaces;
 using users.shared.dtos;
-using users.shared.enums;
-using System;
+using users.shared.enums; 
+using shared.enums.roles; 
+using Microsoft.AspNetCore.Authorization;
+using users.core.services;
 
 namespace users.api.features;
 
@@ -31,7 +33,9 @@ public static class TaskEndpoints
         {
             var createdTask = await taskService.CreateTaskAsync(task);
             return Results.Created($"/api/tasks/{createdTask.Id}", createdTask);
-        }).WithTags("Tasks");
+        })
+        .WithTags("Tasks")
+        .RequireAuthorization(new AuthorizeAttribute { Roles = DomenRoles.Boss.ToString() });;
 
         group.MapPut("/{id}/status", async (Guid id, [FromBody] TskStatus status, [FromServices] ITaskService taskService) =>
         {
@@ -43,6 +47,15 @@ public static class TaskEndpoints
         {
             var result = await taskService.DeleteTaskAsync(id);
             return result ? Results.NoContent() : Results.NotFound();
-        }).WithTags("Tasks");
+        })
+        .WithTags("Tasks")
+        .RequireAuthorization(new AuthorizeAttribute { Roles = DomenRoles.Boss.ToString() }); 
+
+        group.MapPost("/add-task/{userId}/{taskId}", async (Guid userId, Guid taskId, [FromServices] ITaskService taskService) =>
+        {
+            var result = await taskService.AddTaskForUserAsync(userId, taskId); 
+            return result ? Results.NoContent(): Results.Ok(result); 
+        })
+        .RequireAuthorization(new AuthorizeAttribute { Roles = DomenRoles.Boss.ToString() });
     }
 }

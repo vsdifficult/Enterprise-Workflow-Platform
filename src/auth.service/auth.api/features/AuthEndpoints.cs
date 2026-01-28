@@ -29,6 +29,12 @@ public static class AuthEndpoints
         {
             var result = await authService.VerificationAsync(request);
             return result.Success ? Results.Ok(result) : Results.BadRequest(result);
-        }).WithTags("Auth");
+        }).WithTags("Auth"); 
+        
+        group.MapGet("/{id}/exists", async (Guid id, [FromServices] IUserService userService) =>
+        {
+            var result = await userService.GetUserByIdAsync(id); 
+            return Results.Ok(result); 
+        }); 
     }
 }

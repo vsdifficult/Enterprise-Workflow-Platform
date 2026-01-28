@@ -145,6 +145,25 @@ public class TaskRepository: ITaskRepository
         }
     }
 
+    public async Task<bool> RemoveTaskForUserAsync(Guid taskId, Guid userId)
+    {
+        try
+        {
+            var tsk = await _context.Tasks.FindAsync(taskId); 
+            if (tsk == null) { return false; } 
+
+            tsk.UserId.Remove(userId); 
+            _context.Tasks.Update(tsk); 
+            await _context.SaveChangesAsync(); 
+            return true; 
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error to update task"); 
+            throw; 
+        }
+    }
+
     public async Task<bool> UpdateAsync(TaskDto entity)
     {
         try
