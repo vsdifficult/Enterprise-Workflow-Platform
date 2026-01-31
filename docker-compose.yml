@@ -37,6 +37,24 @@ services:
       timeout: 5s
       retries: 5
 
+  postgres-notifications:
+    image: postgres:15-alpine
+    container_name: postgres-notifications
+    restart: always
+    ports:
+      - "5440:5432"
+    volumes:
+      - postgres_notifications_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-enterprisenotifications}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   pgadmin:
     image: dpage/pgadmin4:7.1
     container_name: pgadmin4_container
@@ -91,6 +109,25 @@ services:
       postgres-tasks:
         condition: service_healthy
 
+  notifications_service:
+    build:
+      context: ./src/notifications.service
+    container_name: notifications-service
+    ports:
+      - "5008:80"
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_URLS: http://+:80
+      ConnectionStrings__DefaultConnection: >
+        Host=postgres-notifications;
+        Port=5432;
+        Database=${POSTGRES_DB:-enterprisenotifications};
+        Username=${POSTGRES_USER:-postgres};
+        Password=${POSTGRES_PASSWORD:-postgres};
+    depends_on:
+      postgres-notifications:
+        condition: service_healthy
+
   gateway:
     build:
       context: ./src/gateway
@@ -103,8 +140,10 @@ services:
     depends_on:
       - auth_service
       - users_service
+      - notifications_service
 
 volumes:
   postgres_auth_data:
   postgres_task_data:
+  postgres_notifications_data:
   pgadmin-data:
