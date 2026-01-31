@@ -1,5 +1,5 @@
-using notifications.core.repositories;
 using notifications.core.services.interfaces;
+using notifications.core.repositories;
 using notifications.shared.dtos;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
