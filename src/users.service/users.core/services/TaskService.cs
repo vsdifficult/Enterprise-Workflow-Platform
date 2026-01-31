@@ -106,7 +106,7 @@ public class TaskService : ITaskService
         }  
 
         var result = await _dataService.Tasks.RemoveTaskForUserAsync(taskId, userId); 
-        if ( result == false)
+        if (result == false)
         {
             _logger.LogError($"Error to edit task"); 
         }
